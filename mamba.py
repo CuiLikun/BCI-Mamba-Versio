@@ -10,7 +10,7 @@ class MambaBlock(layers.Layer):
     This implementation uses tf.scan for the selective state space recurrence, 
     which is an approximation suitable for graph execution but slower than custom CUDA kernels.
     """
-    def __init__(self, d_model, d_state=16, d_conv=4, expand=2, dt_rank="auto", conv_bias=True, bias=False, **kwargs):
+    def __init__(self, d_model, d_state=16, d_conv=4, expand=2, dt_rank="auto", conv_bias=True, bias=False, dropout=0.0, **kwargs):
         """
         Args:
             d_model: Input embedding dimension.
@@ -20,6 +20,7 @@ class MambaBlock(layers.Layer):
             dt_rank: Rank of delta projection. "auto" means ceil(d_model / 16).
             conv_bias: Whether to use bias in Conv1D.
             bias: Whether to use bias in linear projections.
+            dropout: Dropout rate.
         """
         super().__init__(**kwargs)
         self.d_model = d_model
@@ -29,6 +30,10 @@ class MambaBlock(layers.Layer):
         self.d_inner = int(self.expand * self.d_model)
         self.conv_bias = conv_bias
         self.bias = bias
+        self.dropout_rate = dropout
+        
+        if dt_rank == "auto":
+            self.bias = bias
         
         if dt_rank == "auto":
             self.dt_rank = int(math.ceil(self.d_model / 16))
@@ -82,6 +87,8 @@ class MambaBlock(layers.Layer):
         # 4. Out Projection
         self.out_proj = layers.Dense(self.d_model, use_bias=self.bias, name='out_proj')
         
+        self.dropout = layers.Dropout(self.dropout_rate)
+
         super().build(input_shape)
 
     def call(self, inputs):
@@ -170,5 +177,7 @@ class MambaBlock(layers.Layer):
         
         # 6. Output Projection
         out = self.out_proj(out)
+        
+        out = self.dropout(out)
         
         return out

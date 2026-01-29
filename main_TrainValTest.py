@@ -40,14 +40,19 @@ from preprocess import get_data
 
 
 # %% 绘图辅助函数
-def draw_learning_curves(history, sub):
+def draw_learning_curves(history, sub, results_path):
+    save_dir = os.path.join(results_path, "pictures")
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
     plt.plot(history.history["accuracy"])
     plt.plot(history.history["val_accuracy"])
     plt.title("Model accuracy - subject: " + str(sub))
     plt.ylabel("Accuracy")
     plt.xlabel("Epoch")
     plt.legend(["Train", "Val"], loc="upper left")
-    plt.show()
+    plt.savefig(os.path.join(save_dir, "accuracy_sub_" + str(sub) + ".png"))
+    plt.close()
 
     plt.plot(history.history["loss"])
     plt.plot(history.history["val_loss"])
@@ -55,19 +60,23 @@ def draw_learning_curves(history, sub):
     plt.ylabel("Loss")
     plt.xlabel("Epoch")
     plt.legend(["Train", "Val"], loc="upper left")
-    plt.show()
+    plt.savefig(os.path.join(save_dir, "loss_sub_" + str(sub) + ".png"))
     plt.close()
 
 
 def draw_confusion_matrix(cf_matrix, sub, results_path, classes_labels):
+    save_dir = os.path.join(results_path, "pictures")
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+        
     # Generate confusion matrix plot
     display_labels = classes_labels
     disp = ConfusionMatrixDisplay(confusion_matrix=cf_matrix, display_labels=display_labels)
     disp.plot()
     disp.ax_.set_xticklabels(display_labels, rotation=12)
     plt.title("Confusion Matrix of Subject: " + str(sub))
-    plt.savefig(results_path + "/subject_" + str(sub) + ".png")
-    plt.show()
+    plt.savefig(os.path.join(save_dir, "subject_" + str(sub) + ".png"))
+    plt.close()
 
 
 def draw_performance_barChart(num_sub, metric, label):
@@ -84,18 +93,16 @@ def draw_performance_barChart(num_sub, metric, label):
 # %% Training
 def train(dataset_conf, train_conf, results_path):
 
-    # remove the 'result' folder before training
-    if os.path.exists(results_path):
-        # Remove the folder and its contents
-        shutil.rmtree(results_path)
-    os.makedirs(results_path)
+    # Create folder if it doesn't exist
+    if not os.path.exists(results_path):
+        os.makedirs(results_path)
 
     # Get the current 'IN' time to calculate the overall training time
     in_exp = time.time()
     # Create a file to store the path of the best model among several runs
-    best_models = open(results_path + "/best models.txt", "w")
+    best_models = open(os.path.join(results_path, "best models.txt"), "a")
     # Create a file to store performance during training
-    log_write = open(results_path + "/log.txt", "w")
+    log_write = open(os.path.join(results_path, "log.txt"), "a")
 
     # Get dataset parameters
     dataset = dataset_conf.get("name")
@@ -118,7 +125,7 @@ def train(dataset_conf, train_conf, results_path):
     kappa = np.zeros((n_sub, n_train))
 
     # Iteration over subjects
-    for sub in range(n_sub):  # (num_sub): for all subjects
+    for sub in range(5, n_sub):  # (num_sub): for all subjects
 
         print("\nTraining on subject ", sub + 1)
         log_write.write("\nTraining on subject " + str(sub + 1) + "\n")
@@ -155,10 +162,10 @@ def train(dataset_conf, train_conf, results_path):
             in_run = time.time()
 
             # Create folders and files to save trained models for all runs
-            filepath = results_path + "/saved models/run-{}".format(train_run + 1)
+            filepath = os.path.join(results_path, "saved models", "run-{}".format(train_run + 1))
             if not os.path.exists(filepath):
                 os.makedirs(filepath)
-            filepath = filepath + "/subject-{}.h5".format(sub + 1)
+            filepath = os.path.join(filepath, "subject-{}.h5".format(sub + 1))
 
             # Create the model
             model = getModel(model_name, dataset_conf, from_logits)
@@ -223,13 +230,13 @@ def train(dataset_conf, train_conf, results_path):
 
         # Store the path of the best model among several runs
         best_run = np.argmax(acc[sub, :])
-        filepath = "/saved models/run-{}/subject-{}.h5".format(best_run + 1, sub + 1) + "\n"
+        filepath = os.path.join("saved models", "run-{}".format(best_run + 1), "subject-{}.h5".format(sub + 1)) + "\n"
         best_models.write(filepath)
 
         # Plot Learning curves
         if LearnCurves == True:
             print("Plot Learning Curves ....... ")
-            draw_learning_curves(bestTrainingHistory, sub + 1)
+            draw_learning_curves(bestTrainingHistory, sub + 1, results_path)
 
     # Get the current 'OUT' time to calculate the overall training time
     out_exp = time.time()
@@ -264,7 +271,7 @@ def train(dataset_conf, train_conf, results_path):
 # 加载已有模型进行推理的工具。逻辑保持一致：只看 Test Set。
 def test(model, dataset_conf, results_path, allRuns=True):
     # Open the  "Log" file to write the evaluation results
-    log_write = open(results_path + "/log.txt", "a")
+    log_write = open(os.path.join(results_path, "log.txt"), "a")
 
     # Get dataset paramters
     dataset = dataset_conf.get("name")
@@ -276,7 +283,7 @@ def test(model, dataset_conf, results_path, allRuns=True):
     classes_labels = dataset_conf.get("cl_labels")
 
     # Test the performance based on several runs (seeds)
-    runs = os.listdir(results_path + "/saved models")
+    runs = os.listdir(os.path.join(results_path, "saved models"))
     # Initialize variables
     acc = np.zeros((n_sub, len(runs)))
     kappa = np.zeros((n_sub, len(runs)))
@@ -291,7 +298,7 @@ def test(model, dataset_conf, results_path, allRuns=True):
         # Iteration over runs (seeds)
         for seed in range(len(runs)):
             # Load the model of the seed.
-            model.load_weights("{}/saved models/{}/subject-{}.h5".format(results_path, runs[seed], sub + 1))
+            model.load_weights(os.path.join(results_path, "saved models", runs[seed], "subject-{}.h5".format(sub + 1)))
 
             inference_time = time.time()
             # Predict MI task
@@ -442,7 +449,7 @@ def run():
         raise Exception("'{}' dataset is not supported yet!".format(dataset))
 
     # Create a folder to store the results of the experiment
-    results_path = os.getcwd() + "/results"
+    results_path = os.path.join(os.getcwd(), "results")
     if not os.path.exists(results_path):
         os.makedirs(results_path)
 

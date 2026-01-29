@@ -43,7 +43,7 @@ def attention_block(in_layer, attention_model, ratio=8, residual = False, apply_
     elif attention_model == 'mamba':  # Mamba layer
         if(in_len > 3):
             in_layer = Reshape((in_sh[1],-1))(in_layer)
-        out_layer = MambaBlock(d_model=in_layer.shape[-1])(in_layer)
+        out_layer = MambaBlock(d_model=in_layer.shape[-1], d_state=16, dropout=0.2)(in_layer)
     elif attention_model == 'se':   # Squeeze-and-excitation layer
         if(in_len < 4):
             in_layer = tf.expand_dims(in_layer, axis=expanded_axis)
