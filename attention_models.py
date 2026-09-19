@@ -40,7 +40,7 @@ def attention_block(in_layer, attention_model, ratio=8, residual = False, apply_
         if(in_len > 3):
             in_layer = Reshape((in_sh[1],-1))(in_layer)
         out_layer = mha_block(in_layer, vanilla = False)
-    elif attention_model == 'mamba':  # Mamba layer
+    elif attention_model in ('mamba', 'mamba_channel'):  # Mamba layer
         if(in_len > 3):
             in_layer = Reshape((in_sh[1],-1))(in_layer)
         out_layer = MambaBlock(d_model=in_layer.shape[-1], d_state=16, dropout=0.2)(in_layer)

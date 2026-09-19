@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import layers, initializers
 import math
 
+@tf.keras.utils.register_keras_serializable(package="eeg")
 class MambaBlock(layers.Layer):
     """
     Mamba Block implementation in TensorFlow/Keras.
@@ -91,7 +92,7 @@ class MambaBlock(layers.Layer):
 
         super().build(input_shape)
 
-    def call(self, inputs):
+    def call(self, inputs, training=None):
         """
         inputs: (Batch, Length, Dim)
         """
@@ -178,6 +179,13 @@ class MambaBlock(layers.Layer):
         # 6. Output Projection
         out = self.out_proj(out)
         
-        out = self.dropout(out)
+        out = self.dropout(out, training=training)
         
         return out
+
+    def get_config(self):
+        return {**super().get_config(), "d_model": self.d_model,
+                "d_state": self.d_state, "d_conv": self.d_conv,
+                "expand": self.expand, "dt_rank": self.dt_rank,
+                "conv_bias": self.conv_bias, "bias": self.bias,
+                "dropout": self.dropout_rate}

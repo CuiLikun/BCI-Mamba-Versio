@@ -151,8 +151,6 @@ def load_BCI2a_data(data_path, subject, training, all_trials = True):
 
 #%%
 import json
-from mne.io import read_raw_edf
-from dateutil.parser import parse
 import glob as glob
 from datetime import datetime
 
@@ -176,6 +174,9 @@ def load_CS2R_data_v2(data_path, subject, training,
     """
     
     # Get all subjects files with .edf format.
+    from mne.io import read_raw_edf
+    from dateutil.parser import parse
+
     subjectFiles = glob.glob(data_path + 'S_*/')
     
     # Get all subjects numbers sorted without duplicates.

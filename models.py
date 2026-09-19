@@ -78,7 +78,7 @@ def ATCNet_(n_classes, in_chans = 22, in_samples = 1125, n_windows = 5, attentio
         
         # Attention_model
         if attention is not None:
-            if (attention == 'se' or attention == 'cbam' or attention == 'mamba'):
+            if (attention == 'se' or attention == 'cbam' or attention == 'mamba_channel'):
                 block2 = Permute((2, 1))(block2) # shape=(None, 32, 16)
                 block2 = attention_block(block2, attention)
                 block2 = Permute((2, 1))(block2) # shape=(None, 16, 32)
